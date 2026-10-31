@@ -20,8 +20,7 @@ export default function LoginPage() {
         if (user) {
           window.location.href = "/dashboard";
         }
-      } catch {
-      }
+      } catch {}
     };
     checkSession();
   }, []);
@@ -49,14 +48,13 @@ export default function LoginPage() {
       try {
         const browserSupabase = createBrowserSupabaseClient();
         await browserSupabase.auth.signInWithPassword({ email, password });
-      } catch {
-      }
+      } catch {}
 
       toast.success("Signed in successfully");
       window.location.href = "/dashboard";
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Authentication failed"
+        error instanceof Error ? error.message : "Authentication failed",
       );
       setLoading(false);
     }
@@ -75,7 +73,7 @@ export default function LoginPage() {
               Sign in
             </h1>
             <p className="text-sm text-[#8e918f] mt-1">
-              to continue to Google Authenticator
+              to continue to AuthESP
             </p>
           </div>
         </div>
@@ -128,7 +126,7 @@ export default function LoginPage() {
       </div>
 
       <div className="mt-8 flex items-center gap-6 text-xs text-[#8e918f]">
-        <span>Google Authenticator</span>
+        <span>AuthESP</span>
         <span>ESP32 Hardware Sync</span>
         <span>RFC 6238 Standard</span>
       </div>
