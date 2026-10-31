@@ -147,3 +147,21 @@ export function verifyApiKey(key: string, hash: Buffer): boolean {
   const computedHash = hashApiKey(key);
   return crypto.timingSafeEqual(computedHash, hash);
 }
+
+export function bufferToBytea(buffer: Buffer): string {
+  return "\\x" + buffer.toString("hex");
+}
+
+export function byteaToBuffer(value: string | Buffer | any): Buffer {
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const hex = value.startsWith("\\x") ? value.slice(2) : value;
+    return Buffer.from(hex, "hex");
+  }
+  if (value && typeof value === "object" && value.type === "Buffer" && Array.isArray(value.data)) {
+    return Buffer.from(value.data);
+  }
+  return Buffer.from(value || "");
+}

@@ -57,25 +57,25 @@ export const otpImportSchema = z.object({
 
 export const apiKeyRotateSchema = z.object({
   confirmation: z.literal("ROTATE", {
-    errorMap: () => ({ message: "Must type 'ROTATE' to confirm" }),
+    message: "Must type 'ROTATE' to confirm",
   }),
 });
 
 export const deviceRevokeSchema = z.object({
   confirmation: z.literal("REVOKE", {
-    errorMap: () => ({ message: "Must type 'REVOKE' to confirm" }),
+    message: "Must type 'REVOKE' to confirm",
   }),
 });
 
 export const deviceDeleteSchema = z.object({
   confirmation: z.literal("DELETE", {
-    errorMap: () => ({ message: "Must type 'DELETE' to confirm" }),
+    message: "Must type 'DELETE' to confirm",
   }),
 });
 
 export const accountDeleteSchema = z.object({
   confirmation: z.literal("DELETE", {
-    errorMap: () => ({ message: "Must type 'DELETE' to confirm" }),
+    message: "Must type 'DELETE' to confirm",
   }),
 });
 

@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { requireAccountOwner } from "@/lib/auth/authorization";
 import { secretReplaceSchema, accountIdSchema } from "@/lib/validation/schemas";
-import { encryptTotpSecret } from "@/lib/security/totp-crypto";
+import { encryptTotpSecret, bufferToBytea } from "@/lib/security/totp-crypto";
 import { logSecretReplaced } from "@/lib/audit";
 import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  const { userId, account } = await requireAccountOwner(params.id);
+  const { id } = await params;
+  const { userId, account } = await requireAccountOwner(id);
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   
   await enforceRateLimit(`secret_replace:${userId}`, "secret_replacement");
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
@@ -32,9 +33,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const { error } = await supabase
     .from("totp_secrets")
     .update({
-      ciphertext: encrypted.ciphertext,
-      iv: encrypted.iv,
-      auth_tag: encrypted.authTag,
+      ciphertext: bufferToBytea(encrypted.ciphertext),
+      iv: bufferToBytea(encrypted.iv),
+      auth_tag: bufferToBytea(encrypted.authTag),
     })
     .eq("account_id", account.id);
   

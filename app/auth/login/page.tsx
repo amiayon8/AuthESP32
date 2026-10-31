@@ -1,15 +1,30 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { Shield, Lock, ArrowRight, KeyRound } from "lucide-react";
+import { Shield, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const browserSupabase = createBrowserSupabaseClient();
+        const {
+          data: { user },
+        } = await browserSupabase.auth.getUser();
+        if (user) {
+          window.location.href = "/dashboard";
+        }
+      } catch {
+      }
+    };
+    checkSession();
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -31,12 +46,18 @@ export default function LoginPage() {
         throw new Error(json.error?.message || "Invalid credentials");
       }
 
+      try {
+        const browserSupabase = createBrowserSupabaseClient();
+        await browserSupabase.auth.signInWithPassword({ email, password });
+      } catch {
+      }
+
       toast.success("Signed in successfully");
-      router.push("/");
-      router.refresh();
+      window.location.href = "/dashboard";
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Authentication failed");
-    } finally {
+      toast.error(
+        error instanceof Error ? error.message : "Authentication failed"
+      );
       setLoading(false);
     }
   };

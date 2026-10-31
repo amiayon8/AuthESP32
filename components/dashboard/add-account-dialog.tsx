@@ -53,12 +53,13 @@ export function AddAccountDialog({
         const nameParts: string[] = [];
         if (parsed.issuer) nameParts.push(parsed.issuer);
         if (parsed.account) nameParts.push(parsed.account);
-        setAccountName(nameParts.join(" (") + (nameParts.length > 1 ? ")" : ""));
+        setAccountName(
+          nameParts.join(" (") + (nameParts.length > 1 ? ")" : ""),
+        );
         setSecretKey(parsed.secret);
         toast.success("Parsed QR setup key from URI");
         return;
-      } catch {
-      }
+      } catch {}
     }
     setSecretKey(value);
   };
@@ -135,7 +136,7 @@ export function AddAccountDialog({
       };
 
       onAccountCreated(newAccount);
-      toast.success("Account added to Google Authenticator");
+      toast.success("Account added to AuthESP");
       handleOpenChange(false);
     } catch (err: any) {
       toast.error(err.message || "Failed to add account");
@@ -217,7 +218,9 @@ export function AddAccountDialog({
                 onChange={(e) => setDeviceId(e.target.value)}
                 className="w-full h-12 px-4 rounded-xl bg-[#282a2c] text-[#e3e3e3] border border-transparent focus:border-[#8ab4f8] focus:outline-none transition-colors text-sm appearance-none cursor-pointer"
               >
-                <option value="none">Local only (do not sync to hardware)</option>
+                <option value="none">
+                  Local only (do not sync to hardware)
+                </option>
                 {devices
                   .filter((d) => d.active && !d.revoked_at)
                   .map((device) => (

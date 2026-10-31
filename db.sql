@@ -264,6 +264,21 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = authenticator, public, ex
 -- ============================================================================
 -- TRIGGERS
 -- ============================================================================
+CREATE OR REPLACE FUNCTION authenticator.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO authenticator.profiles (id, display_name)
+    VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email))
+    ON CONFLICT (id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = authenticator, public, extensions, pg_temp;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION authenticator.handle_new_user();
+
 CREATE TRIGGER trigger_profiles_updated_at
     BEFORE UPDATE ON authenticator.profiles
     FOR EACH ROW EXECUTE FUNCTION authenticator.update_updated_at_column();
@@ -296,6 +311,9 @@ ALTER TABLE authenticator.audit_logs ENABLE ROW LEVEL SECURITY;
 -- ----------------------------------------------------------------------------
 CREATE POLICY "profiles_select_own" ON authenticator.profiles
     FOR SELECT USING (id = auth.uid());
+
+CREATE POLICY "profiles_insert_own" ON authenticator.profiles
+    FOR INSERT WITH CHECK (id = auth.uid());
 
 CREATE POLICY "profiles_update_own" ON authenticator.profiles
     FOR UPDATE USING (id = auth.uid()) WITH CHECK (id = auth.uid());
@@ -417,3 +435,8 @@ COMMENT ON COLUMN authenticator.devices.api_key_prefix IS 'First 8-12 chars of A
 COMMENT ON COLUMN authenticator.totp_secrets.ciphertext IS 'AES-256-GCM encrypted TOTP secret';
 COMMENT ON COLUMN authenticator.totp_secrets.iv IS '12-byte initialization vector (nonce)';
 COMMENT ON COLUMN authenticator.totp_secrets.auth_tag IS '16-byte authentication tag';
+
+INSERT INTO authenticator.profiles (id, display_name)
+SELECT id, COALESCE(raw_user_meta_data->>'display_name', email)
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;

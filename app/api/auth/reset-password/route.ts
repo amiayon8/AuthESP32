@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }

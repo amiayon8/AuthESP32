@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { requireDeviceOwner } from "@/lib/auth/authorization";
 import { apiKeyRotateSchema, deviceIdSchema } from "@/lib/validation/schemas";
-import { generateApiKey } from "@/lib/security/totp-crypto";
+import { generateApiKey, bufferToBytea } from "@/lib/security/totp-crypto";
 import { logApiKeyRotated } from "@/lib/audit";
 import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  const { userId, device } = await requireDeviceOwner(params.id);
+  const { id } = await params;
+  const { userId, device } = await requireDeviceOwner(id);
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   
   await enforceRateLimit(`key_rotate:${userId}`, "api_key_rotation");
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const { error } = await supabase
     .from("devices")
     .update({
-      api_key_hash: hash,
+      api_key_hash: bufferToBytea(hash),
       api_key_prefix: prefix,
       config_version: device.config_version + 1,
     })

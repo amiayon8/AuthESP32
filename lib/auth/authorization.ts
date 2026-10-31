@@ -3,15 +3,28 @@ import crypto from "crypto";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
+import { hashApiKey, bufferToBytea } from "@/lib/security/totp-crypto";
 import type { Device, TotpAccount } from "@/lib/types/database";
 
 export async function requireUser() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   
   if (error || !user) {
     throw new Error("UNAUTHORIZED");
   }
+
+  const adminClient = createAdminSupabaseClient();
+  await adminClient
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        display_name: (user.user_metadata?.display_name as string) || user.email || "User",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
   
   return user;
 }
@@ -59,7 +72,7 @@ export async function requireAccountOwner(accountId: string): Promise<{ userId: 
 
 export async function requireDeviceByApiKey(apiKey: string): Promise<Device> {
   const supabase = createAdminSupabaseClient();
-  const keyHash = hashApiKeyForQuery(apiKey);
+  const keyHash = bufferToBytea(hashApiKey(apiKey));
   
   const { data: device, error } = await supabase
     .from("devices")
@@ -80,8 +93,4 @@ export async function requireDeviceByApiKey(apiKey: string): Promise<Device> {
   }
   
   return device;
-}
-
-function hashApiKeyForQuery(key: string): string {
-  return crypto.createHash("sha256").update(key).digest("hex");
 }

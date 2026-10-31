@@ -63,14 +63,23 @@ export function DashboardView() {
         fetch("/api/audit").then((res) => (res.ok ? res.json() : null)),
       ]);
 
-      if (devicesRes.status === "fulfilled" && devicesRes.value?.data?.devices) {
-        setDevices(devicesRes.value.data.devices);
+      if (devicesRes.status === "fulfilled" && devicesRes.value?.data) {
+        const fetchedDevices = Array.isArray(devicesRes.value.data)
+          ? devicesRes.value.data
+          : devicesRes.value.data.devices || [];
+        setDevices(fetchedDevices);
       }
-      if (accountsRes.status === "fulfilled" && accountsRes.value?.data?.accounts) {
-        setAccounts(accountsRes.value.data.accounts);
+      if (accountsRes.status === "fulfilled" && accountsRes.value?.data) {
+        const fetchedAccounts = Array.isArray(accountsRes.value.data)
+          ? accountsRes.value.data
+          : accountsRes.value.data.accounts || [];
+        setAccounts(fetchedAccounts);
       }
-      if (auditRes.status === "fulfilled" && auditRes.value?.data?.logs) {
-        setAuditLogs(auditRes.value.data.logs);
+      if (auditRes.status === "fulfilled" && auditRes.value?.data) {
+        const fetchedLogs = Array.isArray(auditRes.value.data)
+          ? auditRes.value.data
+          : auditRes.value.data.logs || [];
+        setAuditLogs(fetchedLogs);
       }
 
       if (showToast) {

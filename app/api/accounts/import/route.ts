@@ -3,7 +3,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { requireUserId } from "@/lib/auth/authorization";
 import { otpImportSchema } from "@/lib/validation/schemas";
 import { parseOtpAuthUris } from "@/lib/validation/otp-uri";
-import { encryptTotpSecret } from "@/lib/security/totp-crypto";
+import { encryptTotpSecret, bufferToBytea } from "@/lib/security/totp-crypto";
 import { logAccountCreated, logAccountAssigned } from "@/lib/audit";
 import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
   }
   
   const results = [];
+  const createdAccounts = [];
   
   for (const parsedAccount of parsedAccounts) {
     const encrypted = encryptTotpSecret(parsedAccount.secret);
@@ -84,9 +85,9 @@ export async function POST(request: NextRequest) {
       .from("totp_secrets")
       .insert({
         account_id: account.id,
-        ciphertext: encrypted.ciphertext,
-        iv: encrypted.iv,
-        auth_tag: encrypted.authTag,
+        ciphertext: bufferToBytea(encrypted.ciphertext),
+        iv: bufferToBytea(encrypted.iv),
+        auth_tag: bufferToBytea(encrypted.authTag),
       });
     
     if (secretError) {
@@ -103,6 +104,10 @@ export async function POST(request: NextRequest) {
     }
     
     results.push({ success: true, account: account.name, id: account.id });
+    createdAccounts.push({
+      ...account,
+      secret: parsedAccount.secret,
+    });
   }
   
   const successCount = results.filter(r => r.success).length;
@@ -112,6 +117,7 @@ export async function POST(request: NextRequest) {
       imported: successCount,
       failed: results.length - successCount,
       results,
+      accounts: createdAccounts,
     },
   });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -18,10 +19,12 @@ export async function POST(request: NextRequest) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
-      { status: 400, headers: getRateLimitHeaders({ allowed: true, remaining: 0, resetTime: 0, totalRequests: 0 }) }
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
+      { status: 400 }
     );
   }
+
+  let response = NextResponse.json({ data: { success: true } });
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,7 +35,10 @@ export async function POST(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            response.cookies.set(name, value, options);
+          });
         },
       },
       db: {
@@ -48,12 +54,27 @@ export async function POST(request: NextRequest) {
   
   if (error) {
     return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Invalid credentials" } },
+      { error: { code: "UNAUTHORIZED", message: error.message || "Invalid credentials" } },
       { status: 401 }
     );
   }
+
+  if (data.user) {
+    const adminClient = createAdminSupabaseClient();
+    await adminClient
+      .from("profiles")
+      .upsert(
+        {
+          id: data.user.id,
+          display_name: (data.user.user_metadata?.display_name as string) || data.user.email || "User",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+  }
   
-  const response = NextResponse.json({ data: { user: data.user } });
-  
-  return response;
+  return NextResponse.json(
+    { data: { user: data.user } },
+    { headers: response.headers }
+  );
 }

@@ -66,24 +66,25 @@ export function RegisterDeviceDialog({
         throw new Error(json.error?.message || "Failed to provision device");
       }
 
+      const deviceData = json.data?.device || json.data;
       const newDevice: UiDevice = {
-        id: json.data.device.id,
-        name: json.data.device.name,
-        device_identifier: json.data.device.device_identifier,
-        api_key_prefix: json.data.device.api_key_prefix,
-        active: json.data.device.active,
+        id: deviceData.id,
+        name: deviceData.name,
+        device_identifier: deviceData.device_identifier,
+        api_key_prefix: deviceData.api_key_prefix,
+        active: deviceData.active ?? true,
         revoked_at: null,
         last_sync_at: null,
         last_seen_at: null,
-        config_version: json.data.device.config_version,
+        config_version: deviceData.config_version ?? 1,
         sync_failure_count: 0,
         last_error_code: null,
-        created_at: new Date().toISOString(),
+        created_at: deviceData.created_at || new Date().toISOString(),
         active_account_count: 0,
         total_account_count: 0,
       };
 
-      setCreatedApiKey(json.data.apiKey);
+      setCreatedApiKey(json.data?.api_key || json.data?.apiKey);
       onDeviceCreated(newDevice);
       toast.success("ESP32 hardware authenticator paired");
     } catch (err: any) {

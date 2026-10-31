@@ -18,20 +18,20 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
+            request.cookies.set(name, value)
           );
           response = NextResponse.next({
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, options)
           );
         },
       },
       db: {
         schema: process.env["NEXT_PUBLIC_SUPABASE_SCHEMA"] || "authenticator",
       },
-    },
+    }
   );
 
   const {
@@ -44,8 +44,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
-  if (user && pathname === "/auth/login") {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (user && (pathname === "/auth/login" || pathname === "/")) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return response;

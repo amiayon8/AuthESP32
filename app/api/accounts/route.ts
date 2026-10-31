@@ -3,7 +3,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { requireUserId, requireAccountOwner } from "@/lib/auth/authorization";
 import { accountCreateSchema, accountUpdateSchema, paginationSchema, otpImportSchema } from "@/lib/validation/schemas";
 import { parseOtpAuthUris } from "@/lib/validation/otp-uri";
-import { encryptTotpSecret, decryptTotpSecret } from "@/lib/security/totp-crypto";
+import { encryptTotpSecret, decryptTotpSecret, bufferToBytea, byteaToBuffer } from "@/lib/security/totp-crypto";
 import { logAccountCreated, logAccountAssigned, logAccountUnassigned } from "@/lib/audit";
 import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
@@ -75,9 +75,9 @@ export async function GET(request: NextRequest) {
       const secretData = Array.isArray(rawSecret) ? rawSecret[0] : rawSecret;
       if (secretData?.ciphertext && secretData?.iv && secretData?.auth_tag) {
         const decrypted = decryptTotpSecret(
-          Buffer.from(secretData.ciphertext),
-          Buffer.from(secretData.iv),
-          Buffer.from(secretData.auth_tag)
+          byteaToBuffer(secretData.ciphertext),
+          byteaToBuffer(secretData.iv),
+          byteaToBuffer(secretData.auth_tag)
         );
         secret = decrypted.secret;
       }
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
@@ -182,9 +182,9 @@ export async function POST(request: NextRequest) {
     .from("totp_secrets")
     .insert({
       account_id: account.id,
-      ciphertext: encrypted.ciphertext,
-      iv: encrypted.iv,
-      auth_tag: encrypted.authTag,
+      ciphertext: bufferToBytea(encrypted.ciphertext),
+      iv: bufferToBytea(encrypted.iv),
+      auth_tag: bufferToBytea(encrypted.authTag),
     });
   
   if (secretError) {

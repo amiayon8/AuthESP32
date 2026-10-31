@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { decryptTotpSecret } from "@/lib/security/totp-crypto";
-import { hashApiKey } from "@/lib/security/totp-crypto";
+import { decryptTotpSecret, hashApiKey, bufferToBytea, byteaToBuffer } from "@/lib/security/totp-crypto";
 import { logDeviceSync, logFailedDeviceAuth } from "@/lib/audit";
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
     );
   }
   
-  const keyHash = hashApiKey(apiKey);
+  const keyHash = bufferToBytea(hashApiKey(apiKey));
   const supabase = createAdminSupabaseClient();
   
   const { data: device, error: deviceError } = await supabase
@@ -128,9 +127,9 @@ export async function GET(request: NextRequest) {
     }
     
     const { secret } = decryptTotpSecret(
-      Buffer.from(secretData.ciphertext),
-      Buffer.from(secretData.iv),
-      Buffer.from(secretData.auth_tag)
+      byteaToBuffer(secretData.ciphertext),
+      byteaToBuffer(secretData.iv),
+      byteaToBuffer(secretData.auth_tag)
     );
     
     return {

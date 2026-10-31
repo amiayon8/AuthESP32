@@ -7,17 +7,19 @@ import { logAccountUpdated, logAccountDeleted, logAccountEnabled, logSecretRepla
 import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const { account } = await requireAccountOwner(params.id);
+  const { id } = await params;
+  const { account } = await requireAccountOwner(id);
   
   return NextResponse.json({ data: account });
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const { userId, account } = await requireAccountOwner(params.id);
+  const { id } = await params;
+  const { userId, account } = await requireAccountOwner(id);
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   
   const body = await request.json();
@@ -25,7 +27,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
@@ -148,7 +150,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const { userId, account } = await requireAccountOwner(params.id);
+  const { id } = await params;
+  const { userId, account } = await requireAccountOwner(id);
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   
   const body = await request.json();
@@ -156,7 +159,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }

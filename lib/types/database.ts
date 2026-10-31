@@ -12,7 +12,7 @@ export interface Device {
   user_id: string;
   name: string;
   device_identifier: string;
-  api_key_hash: Buffer;
+  api_key_hash: Buffer | string;
   api_key_prefix: string;
   active: boolean;
   revoked_at: string | null;
@@ -43,9 +43,9 @@ export interface TotpAccount {
 
 export interface TotpSecret {
   account_id: string;
-  ciphertext: Buffer;
-  iv: Buffer;
-  auth_tag: Buffer;
+  ciphertext: Buffer | string;
+  iv: Buffer | string;
+  auth_tag: Buffer | string;
   created_at: string;
   updated_at: string;
 }

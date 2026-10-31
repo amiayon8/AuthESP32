@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { requireUserId } from "@/lib/auth/authorization";
 import { deviceCreateSchema, paginationSchema } from "@/lib/validation/schemas";
-import { generateApiKey } from "@/lib/security/totp-crypto";
+import { generateApiKey, bufferToBytea } from "@/lib/security/totp-crypto";
 import { logDeviceCreated } from "@/lib/audit";
 import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       user_id: userId,
       name: parsed.data.name,
       device_identifier: parsed.data.deviceIdentifier,
-      api_key_hash: hash,
+      api_key_hash: bufferToBytea(hash),
       api_key_prefix: prefix,
     })
     .select()

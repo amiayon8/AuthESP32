@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { DashboardView } from "@/components/dashboard/dashboard-view";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -14,5 +13,5 @@ export default async function HomePage() {
     redirect("/auth/login");
   }
 
-  return <DashboardView />;
+  redirect("/dashboard");
 }

@@ -7,11 +7,12 @@ import { logApiKeyRotated, logDeviceRevoked, logDeviceReactivated } from "@/lib/
 import { enforceRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const { device } = await requireDeviceOwner(params.id);
+  const { id } = await params;
+  const { device } = await requireDeviceOwner(id);
   const supabase = createAdminSupabaseClient();
   
   const { data: accounts, error } = await supabase
@@ -34,7 +35,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const { userId, device } = await requireDeviceOwner(params.id);
+  const { id } = await params;
+  const { userId, device } = await requireDeviceOwner(id);
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   
   const body = await request.json();
@@ -42,7 +44,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
@@ -115,7 +117,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const { userId, device } = await requireDeviceOwner(params.id);
+  const { id } = await params;
+  const { userId, device } = await requireDeviceOwner(id);
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   
   const body = await request.json();
@@ -123,7 +126,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: parsed.error.errors[0].message } },
+      { error: { code: "INVALID_REQUEST", message: parsed.error.issues[0]?.message || parsed.error.message } },
       { status: 400 }
     );
   }
