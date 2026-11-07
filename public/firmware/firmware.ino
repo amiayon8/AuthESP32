@@ -24,6 +24,7 @@
  */
 
 #include <Arduino.h>
+#include <Keypad.h>
 #include <Wire.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -35,7 +36,6 @@
 #include <RTClib.h>
 #include <time.h>
 
-// ESP-IDF MbedTLS & Deep Sleep / RTC GPIO primitives
 #include "mbedtls/md.h"
 #include "mbedtls/pkcs5.h"
 #include "mbedtls/aes.h"
@@ -44,41 +44,22 @@
 #include "esp_sleep.h"
 #include "driver/rtc_io.h"
 
-// ============================================================================
-// 1. PIN & SYSTEM CONFIGURATION
-// ============================================================================
+const byte ROW_COUNT = 4;
+const byte COLUMN_COUNT = 4;
+
+char KEY_MATRIX[ROW_COUNT][COLUMN_COUNT] = {
+  { '1', '2', '3', 'A' },
+  { '4', '5', '6', 'B' },
+  { '7', '8', '9', 'C' },
+  { '*', '0', '#', 'D' }
+};
+
+byte ROW_PIN_NUMBERS[ROW_COUNT] = { 15, 13, 33, 32 };
+byte COLUMN_PIN_NUMBERS[COLUMN_COUNT] = { 14, 27, 26, 25 };
+
+Keypad customKeypad = Keypad(makeKeymap(KEY_MATRIX), ROW_PIN_NUMBERS, COLUMN_PIN_NUMBERS, ROW_COUNT, COLUMN_COUNT);
+
 namespace Config {
-  // 4x4 Matrix Keypad GPIO Pins
-  // IMPORTANT: ROW_0 (GPIO 25) and COL_3 (GPIO 15) MUST be RTC-capable GPIOs
-  // so Key 'A' (Row 0, Col 3) can wake the ESP32 from Deep Sleep via EXT0.
-  constexpr uint8_t KEYPAD_ROWS = 4;
-  constexpr uint8_t KEYPAD_COLS = 4;
-
-  constexpr uint8_t PIN_KP_ROW0 = 15; // R1 (Row with 1, 2, 3, A) - RTC_GPIO6
-  constexpr uint8_t PIN_KP_ROW1 = 13; // R2 (Row with 4, 5, 6, B)
-  constexpr uint8_t PIN_KP_ROW2 = 33; // R3 (Row with 7, 8, 9, C)
-  constexpr uint8_t PIN_KP_ROW3 = 32; // R4 (Row with *, 0, #, D)
-
-  constexpr uint8_t PIN_KP_COL0 = 14; // C1 (Col with 1, 4, 7, *)
-  constexpr uint8_t PIN_KP_COL1 = 27; // C2 (Col with 2, 5, 8, 0)
-  constexpr uint8_t PIN_KP_COL2 = 26; // C3 (Col with 3, 6, 9, #)
-  constexpr uint8_t PIN_KP_COL3 = 25; // C4 (Col with A, B, C, D) - RTC_GPIO13 (EXT0 Wake)
-
-  constexpr uint8_t ROW_PINS[KEYPAD_ROWS] = {
-    PIN_KP_ROW0, PIN_KP_ROW1, PIN_KP_ROW2, PIN_KP_ROW3
-  };
-  constexpr uint8_t COL_PINS[KEYPAD_COLS] = {
-    PIN_KP_COL0, PIN_KP_COL1, PIN_KP_COL2, PIN_KP_COL3
-  };
-
-  constexpr char KEYMAP[KEYPAD_ROWS][KEYPAD_COLS] = {
-    { '1', '2', '3', 'A' },
-    { '4', '5', '6', 'B' },
-    { '7', '8', '9', 'C' },
-    { '*', '0', '#', 'D' }
-  };
-
-  // Shared I2C Bus Pins (16x2 LCD & DS3231 RTC)
   constexpr uint8_t PIN_I2C_SDA = 21;
   constexpr uint8_t PIN_I2C_SCL = 22;
 
@@ -91,9 +72,9 @@ namespace Config {
   // Wi-Fi, NTP, DS3231 & Remote Account Sync Configuration
   constexpr char     WIFI_SSID[]                = "Ayon";
   constexpr char     WIFI_PASSWORD[]            = "Ayon.2008";
-  constexpr char     SERVER_DOMAIN[]            = "authesp.thenciedev.xyz";
+  constexpr char     SERVER_DOMAIN[]            = "authesp.thenicedev.xyz";
   constexpr char     DEVICE_API_KEY[]           = "esp_live_m98p1aJviwyrMFw2vCc1Ls7pM7SSYtQY_VvE6RdSen0";
-  constexpr char     ACCOUNTS_API_URL[]         = "https://authesp.thenciedev.xyz/api/esp32/super_secret__ROUTE";
+  constexpr char     ACCOUNTS_API_URL[]         = "https://authesp.thenicedev.xyz/api/esp32/super_secret__ROUTE";
   constexpr uint32_t HTTP_SYNC_TIMEOUT_MS       = 10000;
   constexpr char     NTP_SERVER_1[]             = "pool.ntp.org";
   constexpr char     NTP_SERVER_2[]             = "time.cloudflare.com";
@@ -113,8 +94,7 @@ namespace Config {
   // Password & Rate-Limiting Policy
   constexpr size_t   MIN_PASS_LEN               = 4;
   constexpr size_t   MAX_PASS_LEN               = 8;
-  constexpr char     DEFAULT_PASSWORD[]         = "1234";    // Default 4-digit keypad password on fresh NVS
-  constexpr char     LEGACY_DEFAULT_PASSWORD[]  = "LRLR";
+  constexpr char     DEFAULT_PASSWORD[]         = "1234";
   constexpr uint32_t BASE_FAIL_COOLDOWN_MS      = 2000;
   constexpr uint32_t MAX_FAIL_COOLDOWN_MS       = 30000;
   constexpr uint32_t PBKDF2_ITERATIONS          = 10000;
@@ -161,85 +141,49 @@ namespace CryptoUtils {
 class KeypadManager {
 public:
   void begin() {
-    // Release RTC GPIO holds in case we just woke up from Deep Sleep
-    rtc_gpio_hold_dis(static_cast<gpio_num_t>(Config::PIN_KP_ROW0));
-    rtc_gpio_deinit(static_cast<gpio_num_t>(Config::PIN_KP_ROW0));
-    rtc_gpio_deinit(static_cast<gpio_num_t>(Config::PIN_KP_COL3));
+    rtc_gpio_hold_dis(static_cast<gpio_num_t>(ROW_PIN_NUMBERS[0]));
+    rtc_gpio_deinit(static_cast<gpio_num_t>(ROW_PIN_NUMBERS[0]));
+    rtc_gpio_deinit(static_cast<gpio_num_t>(COLUMN_PIN_NUMBERS[3]));
 
-    for (uint8_t r = 0; r < Config::KEYPAD_ROWS; ++r) {
-      pinMode(Config::ROW_PINS[r], OUTPUT);
-      digitalWrite(Config::ROW_PINS[r], HIGH);
-    }
-    for (uint8_t c = 0; c < Config::KEYPAD_COLS; ++c) {
-      pinMode(Config::COL_PINS[c], INPUT_PULLUP);
-    }
+    checkPinIsolation();
 
-    lastChangeMs_ = millis();
-    rawKey_       = '\0';
-    stableKey_    = '\0';
-
-    // If the user is still holding 'A' from waking the device, wait for release
-    // so it doesn't immediately trigger sleep again!
+    customKeypad.setDebounceTime(50);
     waitForAllKeysReleased(1500);
   }
 
-  // Returns the character of a newly pressed key (emitted once per press) or '\0'
   char update(uint32_t nowMs) {
-    char scanned = scanMatrix();
-
-    if (scanned != rawKey_) {
-      rawKey_       = scanned;
-      lastChangeMs_ = nowMs;
-    }
-
-    if ((nowMs - lastChangeMs_) >= Config::DEBOUNCE_MS) {
-      if (stableKey_ != rawKey_) {
-        stableKey_ = rawKey_;
-        if (stableKey_ != '\0') {
-          return stableKey_;
-        }
-      }
-    }
-    return '\0';
+    (void)nowMs;
+    return customKeypad.getKey();
   }
 
   void waitForAllKeysReleased(uint32_t maxWaitMs) {
     uint32_t start = millis();
     while ((millis() - start) < maxWaitMs) {
-      if (scanMatrix() == '\0') {
+      if (customKeypad.getKey() == NO_KEY) {
         delay(25);
-        if (scanMatrix() == '\0') break;
+        if (customKeypad.getKey() == NO_KEY) break;
       }
       delay(10);
     }
-    rawKey_       = '\0';
-    stableKey_    = '\0';
-    lastChangeMs_ = millis();
   }
 
-  // Configures Row 0 (GPIO 25) LOW and Col 3 (GPIO 15) as EXT0 LOW wakeup
-  // so pressing 'A' wakes the ESP32 from Deep Sleep.
   void prepareForDeepSleep() {
-    // 1. Wait until user releases 'A' before arming the wakeup trigger
     waitForAllKeysReleased(2000);
 
-    // 2. Set non-wakeup rows high-impedance to eliminate leakage
-    for (uint8_t r = 1; r < Config::KEYPAD_ROWS; ++r) {
-      pinMode(Config::ROW_PINS[r], INPUT);
+    for (byte r = 0; r < ROW_COUNT; ++r) {
+      pinMode(ROW_PIN_NUMBERS[r], INPUT);
     }
-    for (uint8_t c = 0; c < 3; ++c) {
-      pinMode(Config::COL_PINS[c], INPUT);
+    for (byte c = 0; c < COLUMN_COUNT; ++c) {
+      pinMode(COLUMN_PIN_NUMBERS[c], INPUT);
     }
 
-    // 3. Drive Row 0 (GPIO 25) LOW in the RTC domain and hold it during Deep Sleep
-    gpio_num_t row0Gpio = static_cast<gpio_num_t>(Config::PIN_KP_ROW0);
+    gpio_num_t row0Gpio = static_cast<gpio_num_t>(ROW_PIN_NUMBERS[0]);
     rtc_gpio_init(row0Gpio);
     rtc_gpio_set_direction(row0Gpio, RTC_GPIO_MODE_OUTPUT_ONLY);
     rtc_gpio_set_level(row0Gpio, 0);
     rtc_gpio_hold_en(row0Gpio);
 
-    // 4. Configure Col 3 (GPIO 15) with RTC internal pull-up and arm EXT0 wake on LOW
-    gpio_num_t col3Gpio = static_cast<gpio_num_t>(Config::PIN_KP_COL3);
+    gpio_num_t col3Gpio = static_cast<gpio_num_t>(COLUMN_PIN_NUMBERS[3]);
     rtc_gpio_init(col3Gpio);
     rtc_gpio_set_direction(col3Gpio, RTC_GPIO_MODE_INPUT_ONLY);
     rtc_gpio_pullup_en(col3Gpio);
@@ -249,31 +193,42 @@ public:
   }
 
 private:
-  char scanMatrix() {
-    char detected = '\0';
-    for (uint8_t r = 0; r < Config::KEYPAD_ROWS; ++r) {
-      digitalWrite(Config::ROW_PINS[r], LOW);
-      delayMicroseconds(40);
+  void checkPinIsolation() {
+    Serial.println("Running pin isolation diagnostics...");
+    bool shortFound = false;
 
-      for (uint8_t c = 0; c < Config::KEYPAD_COLS; ++c) {
-        if (digitalRead(Config::COL_PINS[c]) == LOW) {
-          detected = Config::KEYMAP[r][c];
-          break;
+    for (byte i = 0; i < ROW_COUNT; ++i) {
+      for (byte j = i + 1; j < ROW_COUNT; ++j) {
+        byte pinOne = ROW_PIN_NUMBERS[i];
+        byte pinTwo = ROW_PIN_NUMBERS[j];
+
+        pinMode(pinOne, OUTPUT);
+        digitalWrite(pinOne, LOW);
+        pinMode(pinTwo, INPUT_PULLUP);
+        delayMicroseconds(50);
+
+        if (digitalRead(pinTwo) == LOW) {
+          shortFound = true;
+          Serial.print("[ALERT] Short detected between Row ");
+          Serial.print(i + 1);
+          Serial.print(" (GPIO ");
+          Serial.print(pinOne);
+          Serial.print(") and Row ");
+          Serial.print(j + 1);
+          Serial.print(" (GPIO ");
+          Serial.print(pinTwo);
+          Serial.println(")");
         }
-      }
 
-      digitalWrite(Config::ROW_PINS[r], HIGH);
-      delayMicroseconds(10);
-      if (detected != '\0') {
-        break;
+        pinMode(pinOne, INPUT_PULLUP);
+        pinMode(pinTwo, INPUT_PULLUP);
       }
     }
-    return detected;
-  }
 
-  char     rawKey_       = '\0';
-  char     stableKey_    = '\0';
-  uint32_t lastChangeMs_ = 0;
+    if (!shortFound) {
+      Serial.println("All row pins are electrically isolated.");
+    }
+  }
 };
 
 // ============================================================================
@@ -649,8 +604,8 @@ private:
 // 6. MODULE: AccountStore (Up to 200 Accounts on LittleFS + Remote HTTPS Sync)
 // ============================================================================
 struct __attribute__((packed)) TotpAccount {
-  char name[13];          // Up to 12 display chars + null terminator
-  char base32Secret[65];  // Up to 64 Base32 chars + null terminator
+  char name[21];
+  char base32Secret[65];
 };
 
 class AccountStore {
@@ -677,10 +632,19 @@ public:
     prefs.end();
 
     if (!LittleFS.exists(FILE_PATH)) {
-      return provisionDefaultAccounts();
+      accountCount_ = 0;
+      CryptoUtils::secureZero(accounts_, sizeof(accounts_));
+      return true;
     }
 
-    return loadAccountsFromFlash();
+    if (!loadAccountsFromFlash()) {
+      LittleFS.remove(FILE_PATH);
+      accountCount_ = 0;
+      CryptoUtils::secureZero(accounts_, sizeof(accounts_));
+      return true;
+    }
+
+    return true;
   }
 
   bool syncFromRemoteApiIfConnected() {
@@ -716,6 +680,16 @@ public:
 
     int httpCode = http.GET();
     if (httpCode != HTTP_CODE_OK) {
+      if (httpCode == 409) {
+        CryptoUtils::secureZero(accounts_, sizeof(accounts_));
+        accountCount_ = 0;
+        if (LittleFS.exists(FILE_PATH)) {
+          LittleFS.remove(FILE_PATH);
+        }
+        Serial.println("[API SYNC] Device has no assigned accounts (HTTP 409)");
+      } else {
+        Serial.printf("[API SYNC] HTTP request failed with code %d\n", httpCode);
+      }
       http.end();
       return false;
     }
@@ -747,6 +721,7 @@ public:
     accountCount_ = parsedCount;
     for (size_t i = 0; i < parsedCount; ++i) {
       accounts_[i] = parsedList[i];
+      Serial.printf("[API SYNC] Account %u: %s\n", static_cast<unsigned int>(i + 1), accounts_[i].name);
     }
 
     CryptoUtils::secureZero(parsedList, Config::MAX_ACCOUNTS * sizeof(TotpAccount));
@@ -777,7 +752,7 @@ private:
   static constexpr char     FILE_PATH[]         = "/accts.enc";
   static constexpr char     TEMP_FILE_PATH[]    = "/accts.tmp";
   static constexpr uint32_t FILE_MAGIC          = 0x41435432;
-  static constexpr uint16_t FILE_VERSION        = 2;
+  static constexpr uint16_t FILE_VERSION        = 3;
   static constexpr size_t   KEY_LEN             = 32;
   static constexpr size_t   IV_LEN              = 16;
   static constexpr size_t   MAC_LEN             = 32;
@@ -788,25 +763,6 @@ private:
     uint16_t count;
     uint8_t  iv[IV_LEN];
   };
-
-  bool provisionDefaultAccounts() {
-    CryptoUtils::secureZero(accounts_, sizeof(accounts_));
-    accountCount_ = 4;
-
-    strncpy(accounts_[0].name, "GitHub", sizeof(accounts_[0].name) - 1);
-    strncpy(accounts_[0].base32Secret, "JBSWY3DPEHPK3PXP", sizeof(accounts_[0].base32Secret) - 1);
-
-    strncpy(accounts_[1].name, "Google", sizeof(accounts_[1].name) - 1);
-    strncpy(accounts_[1].base32Secret, "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", sizeof(accounts_[1].base32Secret) - 1);
-
-    strncpy(accounts_[2].name, "AWS Root", sizeof(accounts_[2].name) - 1);
-    strncpy(accounts_[2].base32Secret, "MFRGGZDFMZTWQ2LKNNWG23TPOBYXE43U", sizeof(accounts_[2].base32Secret) - 1);
-
-    strncpy(accounts_[3].name, "Cloudflare", sizeof(accounts_[3].name) - 1);
-    strncpy(accounts_[3].base32Secret, "ORSXG5A=", sizeof(accounts_[3].base32Secret) - 1);
-
-    return saveAccountsToFlash();
-  }
 
   bool saveAccountsToFlash() {
     if (accountCount_ == 0 || accountCount_ > Config::MAX_ACCOUNTS) return false;
@@ -957,7 +913,7 @@ private:
       if (pos >= len) break;
       pos++;
 
-      char nameBuf[13]   = { 0 };
+      char nameBuf[21]   = { 0 };
       char secretBuf[65] = { 0 };
 
       while (pos < len && json[pos] != '}') {
@@ -1330,6 +1286,7 @@ public:
     writeRows(row1, row2);
   }
 
+  void renderNoAccounts()   { writeRows("NO ACCOUNTS", "Sync via Web API"); }
   void renderClockInvalid() { writeRows("CLOCK INVALID", "Sync NTP or RTC"); }
   void renderStorageError() { writeRows("STORAGE ERROR", "Lock Corrupted!"); }
   void renderRfcError()     { writeRows("CRYPTO ERROR", "RFC Test Failed!"); }
@@ -1712,7 +1669,7 @@ public:
 
     // 4. On cold boot (or if clock is invalid), connect Wi-Fi for NTP & API sync.
     //    On wake from Deep Sleep with valid DS3231 time, skip Wi-Fi to save battery!
-    if (!wokeFromDeepSleep || !rtcTimeValid) {
+    if (!wokeFromDeepSleep || !rtcTimeValid || accountStore_.getAccountCount() == 0) {
       if (!rtcTimeValid) {
         display_.renderBootSync();
       }
@@ -1767,6 +1724,12 @@ public:
         lockMgr_.forceUnlock();
         state_ = SystemState::UNLOCKED_AUTH;
         lastActivityMs_ = nowMs;
+      } else if (serialInput.equalsIgnoreCase("sync")) {
+        Serial.println("[SERIAL] Starting manual API sync");
+        display_.renderApiSync();
+        clock_.connectWiFiAndSyncNtp();
+        accountStore_.syncFromRemoteApiIfConnected();
+        clock_.disconnectWiFi();
       }
     }
 
@@ -1932,11 +1895,16 @@ private:
       return;
     }
 
+    if (accountStore_.getAccountCount() == 0) {
+      display_.renderNoAccounts();
+      return;
+    }
+
     if (selectedAccount_ >= accountStore_.getAccountCount()) {
       selectedAccount_ = 0;
     }
 
-    char acctName[13]  = { 0 };
+    char acctName[21]  = { 0 };
     char base32Sec[65] = { 0 };
     if (!accountStore_.getAccountMeta(selectedAccount_, acctName, sizeof(acctName)) ||
         !accountStore_.getAccountSecret(selectedAccount_, base32Sec, sizeof(base32Sec))) {

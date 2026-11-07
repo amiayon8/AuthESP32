@@ -150,16 +150,28 @@ export function QrScannerDialog({
     setCameraError(null);
     setHasCamera(true);
 
-    try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      };
+    if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
+      setHasCamera(false);
+      setCameraError("Camera access is not supported by this browser.");
+      return;
+    }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    try {
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+      }
+
       streamRef.current = stream;
 
       if (videoRef.current) {
@@ -179,9 +191,9 @@ export function QrScannerDialog({
     } catch (err: any) {
       setHasCamera(false);
       setCameraError(
-        err.name === "NotAllowedError"
-          ? "Camera permission was denied. You can upload a QR image below."
-          : "Could not access camera. You can upload a QR code image."
+        err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
+          ? "Camera permission was denied. Please allow camera access in your browser or site settings."
+          : "Could not access camera. You can retry or upload a QR image."
       );
     }
   }, [stopCamera, startScanningLoop]);
@@ -457,26 +469,36 @@ export function QrScannerDialog({
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-[#e3e3e3]">
-                    Camera unavailable
+                    Camera access needed
                   </h4>
-                  <p className="text-xs text-[#8e918f] mt-1">
-                    {cameraError || "Please check browser permissions"}
+                  <p className="text-xs text-[#8e918f] mt-1 leading-relaxed">
+                    {cameraError || "Please allow camera permissions to scan QR codes."}
                   </p>
                 </div>
-                <label
-                  htmlFor="qr-file-upload-alt"
-                  className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-[#8ab4f8] hover:bg-[#a8c7fa] text-[#041e49] text-xs font-medium cursor-pointer transition-all shadow"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload QR Image
-                  <input
-                    id="qr-file-upload-alt"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
+                <div className="flex flex-col gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-full bg-[#8ab4f8] hover:bg-[#a8c7fa] text-[#041e49] text-xs font-medium cursor-pointer transition-all shadow"
+                  >
+                    <Camera className="h-4 w-4" />
+                    Request Camera Access
+                  </button>
+                  <label
+                    htmlFor="qr-file-upload-alt"
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-full bg-[#282a2c] hover:bg-[#3c4043] text-[#e3e3e3] border border-white/10 text-xs font-medium cursor-pointer transition-all shadow"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload QR Image
+                    <input
+                      id="qr-file-upload-alt"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             )}
           </div>
