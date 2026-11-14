@@ -24,7 +24,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { UiAccount, UiDevice } from "./types";
-import { generateTotpCode, formatTotpCode, getSecondsRemaining } from "@/lib/totp-client";
+import {
+  generateTotpCode,
+  formatTotpCode,
+  getSecondsRemaining,
+} from "@/lib/totp-client";
 
 interface AuthenticatorCodesViewProps {
   accounts: UiAccount[];
@@ -51,10 +55,14 @@ export function AuthenticatorCodesView({
   onOpenAssignDevice,
   onOpenRegisterDevice,
 }: AuthenticatorCodesViewProps) {
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "synced" | "local">("all");
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "synced" | "local"
+  >("all");
   const [codes, setCodes] = React.useState<Record<string, string>>({});
   const [secondsRemaining, setSecondsRemaining] = React.useState<number>(30);
-  const [recentlyCopiedId, setRecentlyCopiedId] = React.useState<string | null>(null);
+  const [recentlyCopiedId, setRecentlyCopiedId] = React.useState<string | null>(
+    null,
+  );
 
   React.useEffect(() => {
     let active = true;
@@ -77,7 +85,7 @@ export function AuthenticatorCodesView({
             account.secret,
             account.period || 30,
             account.digits || 6,
-            account.algorithm || "SHA1"
+            account.algorithm || "SHA1",
           );
           freshCodes[account.id] = code;
         } else {
@@ -105,7 +113,8 @@ export function AuthenticatorCodesView({
       query === "" ||
       account.name.toLowerCase().includes(query) ||
       (account.issuer && account.issuer.toLowerCase().includes(query)) ||
-      (account.account_label && account.account_label.toLowerCase().includes(query));
+      (account.account_label &&
+        account.account_label.toLowerCase().includes(query));
 
     if (!matchesQuery) return false;
 
@@ -132,63 +141,12 @@ export function AuthenticatorCodesView({
 
   const timerRadius = 12;
   const timerCircumference = 2 * Math.PI * timerRadius;
-  const strokeDashoffset = timerCircumference - (secondsRemaining / 30) * timerCircumference;
+  const strokeDashoffset =
+    timerCircumference - (secondsRemaining / 30) * timerCircumference;
   const isExpiringSoon = secondsRemaining <= 5;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4 pb-24">
-      {accounts.length > 0 && (
-        <div className="flex items-center justify-between gap-2 px-1">
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-            <button
-              type="button"
-              onClick={() => setActiveFilter("all")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                activeFilter === "all"
-                  ? "bg-[#004a77] text-[#c2e7ff] border border-[#7cacf8]/40"
-                  : "bg-[#1e1f20] text-[#8e918f] hover:text-[#e3e3e3] border border-transparent"
-              }`}
-            >
-              All accounts ({accounts.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFilter("synced")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all inline-flex items-center gap-1.5 ${
-                activeFilter === "synced"
-                  ? "bg-[#004a77] text-[#c2e7ff] border border-[#7cacf8]/40"
-                  : "bg-[#1e1f20] text-[#8e918f] hover:text-[#e3e3e3] border border-transparent"
-              }`}
-            >
-              <Cpu className="h-3 w-3" />
-              ESP32 Synced ({accounts.filter((a) => a.device_id).length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveFilter("local")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                activeFilter === "local"
-                  ? "bg-[#004a77] text-[#c2e7ff] border border-[#7cacf8]/40"
-                  : "bg-[#1e1f20] text-[#8e918f] hover:text-[#e3e3e3] border border-transparent"
-              }`}
-            >
-              Phone/PC Only ({accounts.filter((a) => !a.device_id).length})
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={onOpenImport}
-              className="p-2 rounded-full text-[#8e918f] hover:text-[#e3e3e3] hover:bg-[#282a2c] transition-colors"
-              title="Import codes"
-            >
-              <Upload className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {accounts.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-center px-4 py-16 sm:py-24">
           <div className="relative mb-6">
@@ -204,7 +162,9 @@ export function AuthenticatorCodesView({
             Get your verification codes
           </h2>
           <p className="text-sm text-[#8e918f] max-w-sm mx-auto mt-2 leading-relaxed">
-            Generate two-step verification codes for all your online accounts. You can also pair an ESP32 hardware device to view codes when your phone is unavailable.
+            Generate two-step verification codes for all your online accounts.
+            You can also pair an Hardware device to view codes when your phone
+            is unavailable.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-8 w-full max-w-md">
@@ -232,7 +192,7 @@ export function AuthenticatorCodesView({
               className="w-full h-11 px-5 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-[#e3e3e3] border border-white/10 font-medium text-sm transition-all flex items-center justify-center gap-2"
             >
               <Cpu className="h-4 w-4 text-[#8ab4f8]" />
-              Pair ESP32
+              Pair Hardware
             </button>
           </div>
         </div>
@@ -241,7 +201,9 @@ export function AuthenticatorCodesView({
           <div className="h-12 w-12 rounded-full bg-[#282a2c] text-[#8e918f] mx-auto flex items-center justify-center mb-3">
             <Search className="h-5 w-5" />
           </div>
-          <h3 className="text-base font-medium text-[#e3e3e3]">No accounts found</h3>
+          <h3 className="text-base font-medium text-[#e3e3e3]">
+            No accounts found
+          </h3>
           <p className="text-xs text-[#8e918f] max-w-xs mx-auto mt-1">
             Try adjusting your search query or selecting a different filter.
           </p>
@@ -257,7 +219,7 @@ export function AuthenticatorCodesView({
               <div
                 key={account.id}
                 onClick={() => handleCopyCode(account)}
-                className="group relative rounded-2xl bg-[#1e1f20] hover:bg-[#282a2c] border border-transparent hover:border-white/5 p-4 sm:px-5 sm:py-4 transition-all duration-150 cursor-pointer select-none active:scale-[0.99] flex items-center justify-between gap-4"
+                className="group relative rounded-2xl bg-[#1e1f20] hover:bg-[#282a2c] border border-transparent hover:border-white/5 p-4 sm:px-5 sm:py-4 transition-all duration-150 cursor-pointer select-none active:scale-[0.99] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -269,13 +231,6 @@ export function AuthenticatorCodesView({
                   <p className="text-[13px] text-[#8e918f] truncate font-normal mt-0.5">
                     {account.account_label || account.name}
                   </p>
-
-                  {account.device_name && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#004a77]/50 text-[#c2e7ff] border border-[#7cacf8]/30 mt-2">
-                      <Cpu className="h-3 w-3 text-[#8ab4f8]" />
-                      <span>ESP32: {account.device_name}</span>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
@@ -285,8 +240,8 @@ export function AuthenticatorCodesView({
                         rawCode === "DISABLED"
                           ? "text-[#8e918f] text-xl tracking-normal font-sans"
                           : isExpiringSoon
-                          ? "text-[#f28b82]"
-                          : "text-[#8ab4f8]"
+                            ? "text-[#f28b82]"
+                            : "text-[#8ab4f8]"
                       }`}
                     >
                       {rawCode === "DISABLED" ? "Disabled" : formatted}
@@ -315,7 +270,9 @@ export function AuthenticatorCodesView({
                             strokeLinecap="round"
                             fill="transparent"
                             className={`transition-all duration-1000 ease-linear ${
-                              isExpiringSoon ? "text-[#f28b82]" : "text-[#8ab4f8]"
+                              isExpiringSoon
+                                ? "text-[#f28b82]"
+                                : "text-[#8ab4f8]"
                             }`}
                           />
                         </svg>
@@ -325,7 +282,10 @@ export function AuthenticatorCodesView({
 
                   <div className="flex items-center">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           type="button"
                           className="h-10 w-10 rounded-full text-[#8e918f] hover:text-[#e3e3e3] hover:bg-[#3c4043]/50 flex items-center justify-center transition-colors"
@@ -333,13 +293,16 @@ export function AuthenticatorCodesView({
                           <MoreVertical className="h-5 w-5" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52 rounded-xl bg-[#282a2c] border-[#3c4043] text-xs py-1.5 shadow-xl">
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-52 rounded-xl bg-[#282a2c] border-[#3c4043] text-xs py-1.5 shadow-xl"
+                      >
                         <DropdownMenuItem
                           onClick={() => onOpenAssignDevice(account)}
                           className="px-3 py-2 text-[#e3e3e3] hover:bg-[#3c4043] focus:bg-[#3c4043] cursor-pointer"
                         >
                           <Cpu className="h-4 w-4 mr-2.5 text-[#8ab4f8]" />
-                          Assign to ESP32 device
+                          Assign to Hardware device
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onOpenReplaceSecret(account)}

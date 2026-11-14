@@ -8,7 +8,10 @@ export function SetupGuideTab() {
   const [copiedCurl, setCopiedCurl] = React.useState(false);
   const [copiedCpp, setCopiedCpp] = React.useState(false);
 
-  const host = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const host =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "http://localhost:3000";
 
   const curlCommand = `curl -X GET "${host}/api/esp32/super_secret__ROUTE" \\
   -H "x-api-key: esp_live_YOUR_DEVICE_API_KEY"`;
@@ -72,10 +75,11 @@ void loop() {
     <div className="w-full max-w-2xl mx-auto space-y-4 pb-20">
       <div className="px-1">
         <h2 className="text-xl font-normal text-[#e3e3e3] tracking-tight">
-          ESP32 Firmware & Setup
+          Hardware Firmware & Setup
         </h2>
         <p className="text-xs text-[#8e918f] mt-0.5">
-          Program your physical ESP32 microcontroller to fetch and calculate TOTP verification codes.
+          Program your physical ESP32 microcontroller to fetch and calculate
+          TOTP verification codes.
         </p>
       </div>
 
@@ -89,7 +93,8 @@ void loop() {
               1. Test Sync with cURL
             </h3>
             <p className="text-xs text-[#8e918f]">
-              Verify your API key against the sync endpoint from a command prompt.
+              Verify your API key against the sync endpoint from a command
+              prompt.
             </p>
           </div>
         </div>
@@ -101,7 +106,11 @@ void loop() {
             onClick={copyCurl}
             className="absolute top-3 right-3 h-8 px-3 rounded-full bg-[#282a2c] hover:bg-[#3c4043] text-xs font-medium text-[#e3e3e3] flex items-center gap-1.5 transition-colors"
           >
-            {copiedCurl ? <Check className="h-3.5 w-3.5 text-[#81c995]" /> : <Copy className="h-3.5 w-3.5" />}
+            {copiedCurl ? (
+              <Check className="h-3.5 w-3.5 text-[#81c995]" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
             Copy
           </button>
         </div>
@@ -129,7 +138,11 @@ void loop() {
             onClick={copyCpp}
             className="absolute top-3 right-3 h-8 px-3 rounded-full bg-[#282a2c] hover:bg-[#3c4043] text-xs font-medium text-[#e3e3e3] flex items-center gap-1.5 transition-colors"
           >
-            {copiedCpp ? <Check className="h-3.5 w-3.5 text-[#81c995]" /> : <Copy className="h-3.5 w-3.5" />}
+            {copiedCpp ? (
+              <Check className="h-3.5 w-3.5 text-[#81c995]" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
             Copy Sketch
           </button>
         </div>

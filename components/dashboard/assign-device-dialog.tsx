@@ -26,7 +26,8 @@ export function AssignDeviceDialog({
   onOpenChange,
   onAccountUpdated,
 }: AssignDeviceDialogProps) {
-  const [selectedDeviceId, setSelectedDeviceId] = React.useState<string>("none");
+  const [selectedDeviceId, setSelectedDeviceId] =
+    React.useState<string>("none");
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -40,7 +41,8 @@ export function AssignDeviceDialog({
     if (!account) return;
 
     setLoading(true);
-    const targetDeviceId = selectedDeviceId === "none" ? null : selectedDeviceId;
+    const targetDeviceId =
+      selectedDeviceId === "none" ? null : selectedDeviceId;
     const assignedDevice = devices.find((d) => d.id === targetDeviceId);
 
     try {
@@ -55,7 +57,9 @@ export function AssignDeviceDialog({
       const json = await response.json();
 
       if (!response.ok) {
-        throw new Error(json.error?.message || "Failed to update device assignment");
+        throw new Error(
+          json.error?.message || "Failed to update device assignment",
+        );
       }
 
       const updated: UiAccount = {
@@ -68,8 +72,8 @@ export function AssignDeviceDialog({
       onAccountUpdated(updated);
       toast.success(
         targetDeviceId
-          ? `Assigned to ${assignedDevice?.name}. Codes will sync to this ESP32.`
-          : "Account set to local phone/browser only"
+          ? `Assigned to ${assignedDevice?.name}. Codes will sync to this Hardware.`
+          : "Account set to local phone/browser only",
       );
       onOpenChange(false);
     } catch (err: any) {
@@ -89,11 +93,9 @@ export function AssignDeviceDialog({
             </div>
             <div>
               <DialogTitle className="text-xl font-normal text-[#e3e3e3]">
-                ESP32 Hardware Sync
+                Hardware Sync
               </DialogTitle>
-              <p className="text-xs text-[#8e918f]">
-                {account?.name}
-              </p>
+              <p className="text-xs text-[#8e918f]">{account?.name}</p>
             </div>
           </div>
         </DialogHeader>

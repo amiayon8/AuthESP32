@@ -78,26 +78,27 @@ export function ImportAccountsDialog({
         try {
           const parsed = parseOtpAuthUri(uri);
           parsedSecrets[parsed.account] = parsed.secret;
-        } catch {
-        }
+        } catch {}
       });
 
-      const newAccounts: UiAccount[] = (json.data.accounts || []).map((acc: any) => ({
-        id: acc.id,
-        name: acc.name,
-        issuer: acc.issuer || null,
-        account_label: acc.account_label || null,
-        algorithm: acc.algorithm as "SHA1" | "SHA256" | "SHA512",
-        digits: acc.digits,
-        period: acc.period,
-        sort_order: acc.sort_order ?? 0,
-        enabled: true,
-        created_at: new Date().toISOString(),
-        device_id: deviceId === "none" ? null : deviceId,
-        device_name: assignedDevice?.name || null,
-        device_prefix: assignedDevice?.api_key_prefix || null,
-        secret: parsedSecrets[acc.account_label || acc.name] || undefined,
-      }));
+      const newAccounts: UiAccount[] = (json.data.accounts || []).map(
+        (acc: any) => ({
+          id: acc.id,
+          name: acc.name,
+          issuer: acc.issuer || null,
+          account_label: acc.account_label || null,
+          algorithm: acc.algorithm as "SHA1" | "SHA256" | "SHA512",
+          digits: acc.digits,
+          period: acc.period,
+          sort_order: acc.sort_order ?? 0,
+          enabled: true,
+          created_at: new Date().toISOString(),
+          device_id: deviceId === "none" ? null : deviceId,
+          device_name: assignedDevice?.name || null,
+          device_prefix: assignedDevice?.api_key_prefix || null,
+          secret: parsedSecrets[acc.account_label || acc.name] || undefined,
+        }),
+      );
 
       onAccountsImported(newAccounts);
       toast.success(`Imported ${newAccounts.length} account(s)`);
@@ -122,7 +123,8 @@ export function ImportAccountsDialog({
                 Import Authenticator URIs
               </DialogTitle>
               <p className="text-xs text-[#8e918f]">
-                Import standard otpauth:// URIs exported from your existing authenticator
+                Import standard otpauth:// URIs exported from your existing
+                authenticator
               </p>
             </div>
           </div>
@@ -151,14 +153,16 @@ export function ImportAccountsDialog({
           {devices.length > 0 && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[#c4c7c5]">
-                Backup to ESP32 Hardware Authenticator
+                Backup to Hardware Authenticator
               </label>
               <select
                 value={deviceId}
                 onChange={(e) => setDeviceId(e.target.value)}
                 className="w-full h-12 px-4 rounded-xl bg-[#282a2c] text-[#e3e3e3] border border-transparent focus:border-[#8ab4f8] focus:outline-none transition-colors text-sm appearance-none cursor-pointer"
               >
-                <option value="none">Local only (do not sync to hardware)</option>
+                <option value="none">
+                  Local only (do not sync to hardware)
+                </option>
                 {devices
                   .filter((d) => d.active && !d.revoked_at)
                   .map((device) => (
@@ -184,7 +188,9 @@ export function ImportAccountsDialog({
               className="h-10 px-6 rounded-full bg-[#8ab4f8] hover:bg-[#a8c7fa] text-[#041e49] text-sm font-medium transition-all shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {loading && <ShieldCheck className="h-4 w-4 animate-spin" />}
-              {loading ? "Importing..." : `Import ${uris.length > 0 ? uris.length : ""} Account${uris.length === 1 ? "" : "s"}`}
+              {loading
+                ? "Importing..."
+                : `Import ${uris.length > 0 ? uris.length : ""} Account${uris.length === 1 ? "" : "s"}`}
             </button>
           </div>
         </form>

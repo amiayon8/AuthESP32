@@ -211,7 +211,7 @@ export function AddAccountDialog({
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[#c4c7c5] flex items-center gap-1.5">
                 <Cpu className="h-3.5 w-3.5 text-[#8ab4f8]" />
-                Backup to ESP32 Hardware Authenticator
+                Backup to Hardware Authenticator
               </label>
               <select
                 value={deviceId}

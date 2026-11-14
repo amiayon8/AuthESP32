@@ -31,7 +31,9 @@ export function DevicesTab({
   onDeviceDeleted,
 }: DevicesTabProps) {
   const [search, setSearch] = React.useState("");
-  const [deviceToRotate, setDeviceToRotate] = React.useState<UiDevice | null>(null);
+  const [deviceToRotate, setDeviceToRotate] = React.useState<UiDevice | null>(
+    null,
+  );
   const [rotateOpen, setRotateOpen] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
@@ -45,7 +47,11 @@ export function DevicesTab({
   });
 
   const handleDelete = async (device: UiDevice) => {
-    if (!window.confirm(`Are you sure you want to delete "${device.name}"? Hardware with this key will stop authenticating.`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${device.name}"? Hardware with this key will stop authenticating.`,
+      )
+    ) {
       return;
     }
 
@@ -62,7 +68,7 @@ export function DevicesTab({
       }
 
       onDeviceDeleted(device.id);
-      toast.success("ESP32 hardware authenticator deleted");
+      toast.success("Hardware authenticator deleted");
     } catch (err: any) {
       toast.error(err.message || "Failed to delete device");
     } finally {
@@ -79,7 +85,9 @@ export function DevicesTab({
         config_version: current.config_version + 1,
       });
     }
-    toast.success("API key rotated. Update your ESP32 firmware with the new key.");
+    toast.success(
+      "API key rotated. Update your Hardware firmware with the new key.",
+    );
   };
 
   return (
@@ -87,10 +95,11 @@ export function DevicesTab({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
         <div>
           <h2 className="text-xl font-normal text-[#e3e3e3] tracking-tight">
-            ESP32 Authenticators
+            Hardware Authenticators
           </h2>
           <p className="text-xs text-[#8e918f] mt-0.5">
-            Physical hardware tokens that sync verification codes over local Wi-Fi.
+            Physical hardware tokens that sync verification codes over local
+            Wi-Fi.
           </p>
         </div>
 
@@ -100,7 +109,7 @@ export function DevicesTab({
           className="h-10 px-5 rounded-full bg-[#8ab4f8] hover:bg-[#a8c7fa] text-[#041e49] text-xs font-medium transition-all shadow flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          Pair New ESP32
+          Pair New Hardware
         </button>
       </div>
 
@@ -123,10 +132,12 @@ export function DevicesTab({
             <Cpu className="h-10 w-10 stroke-[1.5]" />
           </div>
           <h3 className="text-lg font-normal text-[#e3e3e3]">
-            No ESP32 authenticators paired
+            No Hardware authenticators paired
           </h3>
           <p className="text-xs text-[#8e918f] max-w-sm mx-auto mt-1.5 leading-relaxed">
-            Pair an ESP32 hardware device (ESP32-S3, C3, or classic) to use as a dedicated physical authenticator whenever your phone or computer is unavailable.
+            Pair an Hardware device (ESP32-S3, C3, or classic) to use as a
+            dedicated physical authenticator whenever your phone or computer is
+            unavailable.
           </p>
           <button
             type="button"
@@ -208,7 +219,10 @@ export function DevicesTab({
                 <div className="flex items-center justify-between text-xs text-[#8e918f] px-1">
                   <span className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
-                    Last sync: {device.last_sync_at ? new Date(device.last_sync_at).toLocaleTimeString() : "Never"}
+                    Last sync:{" "}
+                    {device.last_sync_at
+                      ? new Date(device.last_sync_at).toLocaleTimeString()
+                      : "Never"}
                   </span>
                   <span className="font-mono text-[11px]">
                     Config v{device.config_version}

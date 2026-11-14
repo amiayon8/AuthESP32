@@ -109,10 +109,6 @@ export default function LoginPage() {
           </div>
 
           <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-[#8e918f]">
-              Protected with ESP32 backup
-            </span>
-
             <button
               type="submit"
               disabled={loading}
@@ -127,7 +123,7 @@ export default function LoginPage() {
 
       <div className="mt-8 flex items-center gap-6 text-xs text-[#8e918f]">
         <span>AuthESP</span>
-        <span>ESP32 Hardware Sync</span>
+        <span>Hardware Sync</span>
         <span>RFC 6238 Standard</span>
       </div>
     </div>

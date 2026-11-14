@@ -47,7 +47,8 @@ export function QrScannerDialog({
   const [torchAvailable, setTorchAvailable] = React.useState(false);
   const [torchOn, setTorchOn] = React.useState(false);
   const [processing, setProcessing] = React.useState(false);
-  const [selectedDeviceId, setSelectedDeviceId] = React.useState<string>("none");
+  const [selectedDeviceId, setSelectedDeviceId] =
+    React.useState<string>("none");
   const [detectedUri, setDetectedUri] = React.useState<string | null>(null);
   const [scannedDetails, setScannedDetails] = React.useState<{
     issuer?: string | null;
@@ -112,7 +113,7 @@ export function QrScannerDialog({
         setProcessing(false);
       }
     },
-    [processing, detectedUri, stopCamera]
+    [processing, detectedUri, stopCamera],
   );
 
   const startScanningLoop = React.useCallback(() => {
@@ -128,9 +129,14 @@ export function QrScannerDialog({
         if (ctx) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert",
-          });
+          const qrCode = jsQR(
+            imageData.data,
+            imageData.width,
+            imageData.height,
+            {
+              inversionAttempts: "dontInvert",
+            },
+          );
 
           if (qrCode && qrCode.data) {
             handleDecodedString(qrCode.data);
@@ -150,7 +156,10 @@ export function QrScannerDialog({
     setCameraError(null);
     setHasCamera(true);
 
-    if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
+    if (
+      typeof window === "undefined" ||
+      !navigator?.mediaDevices?.getUserMedia
+    ) {
       setHasCamera(false);
       setCameraError("Camera access is not supported by this browser.");
       return;
@@ -193,7 +202,7 @@ export function QrScannerDialog({
       setCameraError(
         err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
           ? "Camera permission was denied. Please allow camera access in your browser or site settings."
-          : "Could not access camera. You can retry or upload a QR image."
+          : "Could not access camera. You can retry or upload a QR image.",
       );
     }
   }, [stopCamera, startScanningLoop]);
@@ -238,7 +247,11 @@ export function QrScannerDialog({
         if (ctx) {
           ctx.drawImage(img, 0, 0);
           const imageData = ctx.getImageData(0, 0, img.width, img.height);
-          const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+          const qrCode = jsQR(
+            imageData.data,
+            imageData.width,
+            imageData.height,
+          );
           if (qrCode && qrCode.data) {
             handleDecodedString(qrCode.data);
           } else {
@@ -287,7 +300,8 @@ export function QrScannerDialog({
         id: json.data.id,
         name: json.data.name,
         issuer: json.data.issuer || scannedDetails.issuer || null,
-        account_label: json.data.account_label || scannedDetails.account || null,
+        account_label:
+          json.data.account_label || scannedDetails.account || null,
         algorithm: json.data.algorithm || scannedDetails.algorithm,
         digits: json.data.digits || scannedDetails.digits,
         period: json.data.period || scannedDetails.period,
@@ -393,14 +407,16 @@ export function QrScannerDialog({
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-[#c4c7c5] flex items-center gap-1.5">
                   <Cpu className="h-3.5 w-3.5 text-[#8ab4f8]" />
-                  Backup to ESP32 Hardware Authenticator
+                  Backup to Hardware Authenticator
                 </label>
                 <select
                   value={selectedDeviceId}
                   onChange={(e) => setSelectedDeviceId(e.target.value)}
                   className="w-full h-11 px-3.5 rounded-xl bg-[#282a2c] text-[#e3e3e3] border border-transparent focus:border-[#8ab4f8] focus:outline-none transition-colors text-xs appearance-none cursor-pointer"
                 >
-                  <option value="none">Local only (do not sync to hardware)</option>
+                  <option value="none">
+                    Local only (do not sync to hardware)
+                  </option>
                   {devices
                     .filter((d) => d.active && !d.revoked_at)
                     .map((device) => (
@@ -472,7 +488,8 @@ export function QrScannerDialog({
                     Camera access needed
                   </h4>
                   <p className="text-xs text-[#8e918f] mt-1 leading-relaxed">
-                    {cameraError || "Please allow camera permissions to scan QR codes."}
+                    {cameraError ||
+                      "Please allow camera permissions to scan QR codes."}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 w-full">
@@ -507,4 +524,3 @@ export function QrScannerDialog({
     </Dialog>
   );
 }
-

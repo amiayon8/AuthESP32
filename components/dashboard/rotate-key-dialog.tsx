@@ -64,7 +64,8 @@ export function RotateKeyDialog({
       }
 
       const generatedKey = json.data.apiKey || json.data.api_key;
-      const generatedPrefix = json.data.apiKeyPrefix || json.data.api_key_prefix;
+      const generatedPrefix =
+        json.data.apiKeyPrefix || json.data.api_key_prefix;
       setNewKey(generatedKey);
       onKeyRotated(device.id, generatedPrefix);
       toast.success("API key rotated successfully");
@@ -117,7 +118,11 @@ export function RotateKeyDialog({
                   onClick={copyToClipboard}
                   className="h-8 px-3 rounded-full bg-[#282a2c] hover:bg-[#3c4043] text-xs font-medium text-[#e3e3e3] flex items-center gap-1.5 transition-colors shrink-0"
                 >
-                  {copied ? <Check className="h-3.5 w-3.5 text-[#81c995]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? (
+                    <Check className="h-3.5 w-3.5 text-[#81c995]" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
                   Copy
                 </button>
               </div>
@@ -126,7 +131,8 @@ export function RotateKeyDialog({
             <div className="p-3.5 rounded-2xl bg-[#3c2a10]/40 border border-[#fdd663]/20 flex items-start gap-2.5 text-xs text-[#fdd663]">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <p>
-                Update your ESP32 device firmware sketch with this new key. The previous key has been immediately revoked.
+                Update your Hardware device firmware sketch with this new key.
+                The previous key has been immediately revoked.
               </p>
             </div>
 
@@ -145,7 +151,9 @@ export function RotateKeyDialog({
             <div className="p-3.5 rounded-2xl bg-[#3c1414]/30 border border-[#f28b82]/20 flex items-start gap-2.5 text-xs text-[#f28b82]">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <p>
-                Rotating this key will immediately invalidate the existing key. Any ESP32 hardware using the old key will fail to sync until re-flashed.
+                Rotating this key will immediately invalidate the existing key.
+                Any Hardware using the old key will fail to sync until
+                re-flashed.
               </p>
             </div>
 

@@ -36,7 +36,8 @@ import { AssignDeviceDialog } from "./assign-device-dialog";
 import { QrScannerDialog } from "./qr-scanner-dialog";
 
 export function DashboardView() {
-  const [activeTab, setActiveTab] = React.useState<DashboardTab>("authenticator");
+  const [activeTab, setActiveTab] =
+    React.useState<DashboardTab>("authenticator");
   const [devices, setDevices] = React.useState<UiDevice[]>([]);
   const [accounts, setAccounts] = React.useState<UiAccount[]>([]);
   const [auditLogs, setAuditLogs] = React.useState<UiAuditLog[]>([]);
@@ -49,9 +50,11 @@ export function DashboardView() {
   const [registerOpen, setRegisterOpen] = React.useState(false);
   const [addAccountOpen, setAddAccountOpen] = React.useState(false);
   const [importAccountsOpen, setImportAccountsOpen] = React.useState(false);
-  const [selectedAccountForReplace, setSelectedAccountForReplace] = React.useState<UiAccount | null>(null);
+  const [selectedAccountForReplace, setSelectedAccountForReplace] =
+    React.useState<UiAccount | null>(null);
   const [replaceSecretOpen, setReplaceSecretOpen] = React.useState(false);
-  const [selectedAccountForAssign, setSelectedAccountForAssign] = React.useState<UiAccount | null>(null);
+  const [selectedAccountForAssign, setSelectedAccountForAssign] =
+    React.useState<UiAccount | null>(null);
   const [assignDeviceOpen, setAssignDeviceOpen] = React.useState(false);
 
   const fetchDashboardData = React.useCallback(async (showToast = false) => {
@@ -105,7 +108,7 @@ export function DashboardView() {
 
   const handleDeviceUpdated = (updatedDevice: UiDevice) => {
     setDevices((prev) =>
-      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
+      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d)),
     );
   };
 
@@ -115,8 +118,8 @@ export function DashboardView() {
       prev.map((acc) =>
         acc.device_id === deviceId
           ? { ...acc, device_id: null, device_name: null, device_prefix: null }
-          : acc
-      )
+          : acc,
+      ),
     );
   };
 
@@ -131,8 +134,8 @@ export function DashboardView() {
                 active_account_count: (dev.active_account_count ?? 0) + 1,
                 total_account_count: (dev.total_account_count ?? 0) + 1,
               }
-            : dev
-        )
+            : dev,
+        ),
       );
     }
   };
@@ -143,7 +146,7 @@ export function DashboardView() {
 
   const handleAccountUpdated = (updatedAccount: UiAccount) => {
     setAccounts((prev) =>
-      prev.map((a) => (a.id === updatedAccount.id ? updatedAccount : a))
+      prev.map((a) => (a.id === updatedAccount.id ? updatedAccount : a)),
     );
   };
 
@@ -161,8 +164,12 @@ export function DashboardView() {
     }
   };
 
-  const activeHardwareCount = devices.filter((d) => d.active && !d.revoked_at).length;
-  const syncedAccountCount = accounts.filter((a) => a.device_id && a.enabled).length;
+  const activeHardwareCount = devices.filter(
+    (d) => d.active && !d.revoked_at,
+  ).length;
+  const syncedAccountCount = accounts.filter(
+    (a) => a.device_id && a.enabled,
+  ).length;
 
   return (
     <div className="min-h-screen bg-[#131314] text-[#e3e3e3] flex flex-col font-sans selection:bg-[#8ab4f8]/30 selection:text-[#8ab4f8] relative">
@@ -201,7 +208,9 @@ export function DashboardView() {
               className="p-2 rounded-full text-[#8e918f] hover:text-[#e3e3e3] hover:bg-[#3c4043]/40 transition-colors"
               title="Refresh"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
             </button>
 
             <DropdownMenu>
@@ -214,7 +223,10 @@ export function DashboardView() {
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#81c995] border-2 border-[#1e1f20]" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72 rounded-3xl bg-[#282a2c] border-[#3c4043] p-4 shadow-2xl text-[#e3e3e3]">
+              <DropdownMenuContent
+                align="end"
+                className="w-72 rounded-3xl bg-[#282a2c] border-[#3c4043] p-4 shadow-2xl text-[#e3e3e3]"
+              >
                 <div className="flex items-center gap-3 pb-3 border-b border-[#3c4043]">
                   <div className="h-10 w-10 rounded-full bg-[#8ab4f8] text-[#041e49] font-medium flex items-center justify-center text-base">
                     A
@@ -241,7 +253,7 @@ export function DashboardView() {
                   <div className="flex items-center justify-between text-[#c4c7c5]">
                     <span className="flex items-center gap-2">
                       <Cpu className="h-3.5 w-3.5 text-[#8ab4f8]" />
-                      ESP32 hardware keys
+                      Hardware keys
                     </span>
                     <span className="font-mono text-[#8ab4f8]">
                       {activeHardwareCount} paired
@@ -289,7 +301,7 @@ export function DashboardView() {
               }`}
             >
               <Cpu className="h-3.5 w-3.5" />
-              ESP32 Authenticators
+              Hardware Authenticators
               <span className="ml-1 px-1.5 py-0.2 rounded-full bg-[#131314]/40 text-[10px]">
                 {devices.length}
               </span>
@@ -413,7 +425,7 @@ export function DashboardView() {
               }}
               className="flex items-center gap-3 px-4 py-2.5 rounded-full bg-[#282a2c] text-[#e3e3e3] hover:bg-[#3c4043] border border-white/5 shadow-lg text-xs font-medium transition-all active:scale-95"
             >
-              <span>Pair ESP32 authenticator</span>
+              <span>Pair Hardware authenticator</span>
               <div className="h-8 w-8 rounded-full bg-[#004a77] text-[#c2e7ff] flex items-center justify-center">
                 <Cpu className="h-4 w-4" />
               </div>

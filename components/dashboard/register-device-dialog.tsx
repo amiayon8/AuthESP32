@@ -86,9 +86,9 @@ export function RegisterDeviceDialog({
 
       setCreatedApiKey(json.data?.api_key || json.data?.apiKey);
       onDeviceCreated(newDevice);
-      toast.success("ESP32 hardware authenticator paired");
+      toast.success("Hardware authenticator paired");
     } catch (err: any) {
-      toast.error(err.message || "Failed to provision ESP32 device");
+      toast.error(err.message || "Failed to provision Hardware  device");
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,9 @@ export function RegisterDeviceDialog({
             </div>
             <div>
               <DialogTitle className="text-xl font-normal text-[#e3e3e3]">
-                {createdApiKey ? "ESP32 Paired" : "Pair ESP32 Authenticator"}
+                {createdApiKey
+                  ? "Hardware  Paired"
+                  : "Pair Hardware  Authenticator"}
               </DialogTitle>
               <p className="text-xs text-[#8e918f]">
                 {createdApiKey
@@ -138,7 +140,11 @@ export function RegisterDeviceDialog({
                   onClick={copyToClipboard}
                   className="h-8 px-3 rounded-full bg-[#282a2c] hover:bg-[#3c4043] text-xs font-medium text-[#e3e3e3] flex items-center gap-1.5 transition-colors shrink-0"
                 >
-                  {copied ? <Check className="h-3.5 w-3.5 text-[#81c995]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? (
+                    <Check className="h-3.5 w-3.5 text-[#81c995]" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
                   Copy
                 </button>
               </div>
@@ -147,7 +153,8 @@ export function RegisterDeviceDialog({
             <div className="p-3.5 rounded-2xl bg-[#3c1414]/30 border border-[#f28b82]/20 flex items-start gap-2.5 text-xs text-[#f28b82]">
               <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
               <p>
-                Store this key in your ESP32 sketch now. It is hashed on the server and cannot be retrieved again.
+                Store this key in your Hardware sketch now. It is hashed on the
+                server and cannot be retrieved again.
               </p>
             </div>
 

@@ -59,7 +59,7 @@ CREATE TABLE authenticator.profiles (
 );
 
 -- ----------------------------------------------------------------------------
--- devices - ESP32 hardware authenticators
+-- devices - Hardware authenticators
 -- ----------------------------------------------------------------------------
 CREATE TABLE authenticator.devices (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -426,7 +426,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA authenticator GRANT ALL ON ROUTINES TO anon, 
 -- COMMENTS
 -- ============================================================================
 COMMENT ON TABLE authenticator.profiles IS 'User profiles linked to Supabase Auth';
-COMMENT ON TABLE authenticator.devices IS 'ESP32 hardware authenticator devices';
+COMMENT ON TABLE authenticator.devices IS 'Hardware authenticator devices';
 COMMENT ON TABLE authenticator.totp_accounts IS 'TOTP account metadata (no secrets)';
 COMMENT ON TABLE authenticator.totp_secrets IS 'Encrypted TOTP secrets - access restricted to service role';
 COMMENT ON TABLE authenticator.audit_logs IS 'Security audit trail for all sensitive operations';
